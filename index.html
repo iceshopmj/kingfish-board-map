@@ -105,7 +105,7 @@
   .lg .ct { color: var(--ink-faint); font-weight: 700; font-variant-numeric: tabular-nums; }
 
   .tbl-wrap { width: 100%; overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14px; }
   thead th { text-align: left; font-family: var(--font-disp); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); padding: 8px 12px; border-bottom: 1.5px solid var(--hair); position: sticky; top: 0; background: var(--surface); }
   thead th.num, tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody td { padding: 9px 12px; border-bottom: 1px solid var(--hair); vertical-align: middle; }
@@ -148,6 +148,12 @@
   .pcard .pmono { width: 44px; height: 44px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: var(--font-disp); font-weight: 800; font-size: 16px; color: #fff; flex: none; }
   .pcard .pn { font-weight: 700; font-size: 13.5px; line-height: 1.25; }
   .pcard .pb { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .art { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .03em; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--hair); color: var(--ink-soft); white-space: nowrap; }
+  .art .d { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .art.needed .d { background: var(--st-draft); }
+  .art.received .d { background: var(--st-proposal); }
+  .art.sent .d { background: var(--st-sold); }
+  td.artcell .na { color: var(--ink-faint); }
 
   footer.fine { margin-top: 30px; font-size: 12.5px; color: var(--ink-faint); line-height: 1.6; }
   footer.fine b { color: var(--ink-soft); }
@@ -193,7 +199,7 @@
     <div class="tbl-wrap">
       <table>
         <thead>
-          <tr><th class="num">#</th><th>Size</th><th class="num">Board Price</th><th>Status</th><th>Sponsor</th></tr>
+          <tr><th class="num">#</th><th>Size</th><th class="num">Board Price</th><th>Status</th><th>Sponsor</th><th>Artwork</th></tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -203,7 +209,7 @@
   <section class="card" id="partnercard" style="display:none">
     <div class="card-head">
       <h2>2026–27 Partners</h2>
-      <span class="note">Committed &amp; in-pipeline · logos load from the sheet's Logo column (G)</span>
+      <span class="note">Committed &amp; in-pipeline · logo + artwork status tracked per partner</span>
     </div>
     <div class="pwall" id="pwall"></div>
   </section>
@@ -215,7 +221,8 @@
 
   <footer class="fine">
     <div class="footgrid">
-      <div><b>Live data.</b> Board status and sponsor names update automatically from the Kingfish inventory sheet — edit the sheet, refresh this page, and the map repaints. Drop a logo image URL in column G (“Logo”) of a board row and the sponsor’s mark appears in the tracker, the hover card, and the partner wall. The rink layout is fixed; only what's sold changes.</div>
+      <div><b>Live data.</b> Board status and sponsor names update automatically from the Kingfish inventory sheet — edit the sheet, refresh this page, and the map repaints. Drop a logo image URL in column G (“Logo”) and an artwork status in column H (“Artwork”: Needed / Received / Sent) of a board row. Signed deals are also built into the page directly, so they show even before the sheet is updated — the sheet wins once its row is filled in.</div>
+      <div><b>Artwork.</b> Every committed board needs print-ready art before it goes to production. The Artwork tag tracks the handoff: <b>Needed</b> → <b>Received</b> from sponsor → <b>Sent</b> to the board printer.</div>
       <div><b>Pricing.</b> From the 2026–27 rate card: 14&nbsp;ft = $10,000 · 7&nbsp;ft = $6,000 · 4&nbsp;ft = $4,000. <b>Prime</b> = camera-side broadcast wall + attacking-zone corners (highest exposure).</div>
       <div><b>Layout basis.</b> Positions derived from the true NHL-regulation 200×85 sheet (28-ft corners, ≈522 ft of dasher). Bench fronts, penalty boxes, and Zamboni gate are separate inventory. <b>Confirm exact panel count on a rink walkthrough before publishing final numbers.</b></div>
       <div><b>Category exclusivity</b> holds on the prime wall — one partner per category. Prime and corner boards carry a 20–40% exposure premium over back-side inventory.</div>
@@ -234,6 +241,14 @@
   var PRICE = {14:10000, 7:6000, 4:4000};
   var STLABEL = {sold:'Sold', proposal:'Proposal Out', draft:'Draft — Pending', renewal:'Renewal Target', available:'Available'};
   var stColor = {sold:'var(--st-sold)', proposal:'var(--st-proposal)', draft:'var(--st-draft)', renewal:'var(--st-renewal)', available:'var(--st-avail)'};
+  var ARTLABEL = {needed:'Needed', received:'Received', sent:'Sent'};
+
+  // ===== SIGNED DEALS (baked in — the sheet overrides these once its row is filled) =====
+  // Board numbers are provisional placements; move a deal by editing its number here or in the sheet.
+  var SEED = {
+    5:  {st:'sold', sp:'Brickyard South', art:'needed'},   // 4 ft — signed 2026-27
+    26: {st:'sold', sp:'180 Pros',        art:'needed'}    // 7 ft prime — signed 2026-27
+  };
 
   // Board geometry (fixed layout), clockwise from bench-side left. All start Available.
   var RAW = [
@@ -256,7 +271,16 @@
   ];
   var fracs = [], idx = 0;
   SEG.forEach(function(g){ var n=g[0], a=g[1], b=g[2]; for (var i=0;i<n;i++){ fracs[idx++] = a + (b-a)*((i+0.5)/n); } });
-  RAW.forEach(function(b,i){ b.num=i+1; b.price=PRICE[b.s]; b.frac=fracs[i]; b.st='available'; b.sp=''; b.logo=''; });
+  RAW.forEach(function(b,i){ b.num=i+1; b.price=PRICE[b.s]; b.frac=fracs[i]; b.st='available'; b.sp=''; b.logo=''; b.art=''; });
+
+  function applySeed(){
+    RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; b.art=''; });
+    Object.keys(SEED).forEach(function(n){
+      var b=RAW[n-1], s=SEED[n]; if (!b) return;
+      b.st=s.st; b.sp=s.sp; b.art=s.art||''; b.logo=s.logo||'';
+    });
+  }
+  applySeed();
 
   var zoneList = ['Bench Side','Attacking-Zone Corner','East End','Camera Side','West End'];
 
@@ -287,9 +311,15 @@
     if (s.indexOf('renewal')===0) return 'renewal';
     return 'available';
   }
+  function artKey(s){
+    s=(s||'').trim().toLowerCase();
+    if (s.indexOf('sent')===0) return 'sent';
+    if (s.indexOf('rec')===0) return 'received';
+    if (s.indexOf('need')===0) return 'needed';
+    return '';
+  }
   function applySheet(rows){
-    // reset
-    RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; });
+    applySeed();  // start from the baked-in signed deals
     var re=/^board\s+(\d+)$/i, applied=0;
     rows.forEach(function(r){
       if (!r || !r.length) return;
@@ -297,11 +327,16 @@
       if (!m) return;
       var n=parseInt(m[1],10);
       var b=RAW[n-1]; if (!b) return;
-      b.st = statusKey(r[4]);            // Status column (E)
-      b.sp = (r[5]||'').trim();          // Sponsor column (F)
-      b.logo = (r[6]||'').trim();        // Logo URL column (G) — optional
+      var st = statusKey(r[4]);          // Status column (E)
+      var sp = (r[5]||'').trim();        // Sponsor column (F)
+      // A blank/AVAILABLE sheet row carries no info — keep the baked-in deal.
+      if (st!=='available' || sp){ b.st=st; b.sp=sp; }
+      if ((r[6]||'').trim()) b.logo=(r[6]||'').trim();   // Logo URL column (G)
+      if (artKey(r[7])) b.art=artKey(r[7]);              // Artwork column (H)
       applied++;
     });
+    // Every committed board tracks artwork; default to Needed.
+    RAW.forEach(function(b){ if (b.st!=='available' && !b.art) b.art='needed'; });
     return applied;
   }
 
@@ -434,17 +469,21 @@
       var list=byZone[z]; if(!list) return;
       var zval=list.reduce(function(s,b){return s+b.price;},0);
       var hdr=document.createElement('tr'); hdr.className='zonehdr';
-      hdr.innerHTML='<td colspan="5">'+z+'  ·  '+list.length+' boards  ·  $'+zval.toLocaleString()+' inventory</td>';
+      hdr.innerHTML='<td colspan="6">'+z+'  ·  '+list.length+' boards  ·  $'+zval.toLocaleString()+' inventory</td>';
       tbody.appendChild(hdr);
       list.sort(function(a,b){return a.num-b.num;}).forEach(function(b){
         var tr=document.createElement('tr'); tr.className='b-row'; tr.setAttribute('data-num',b.num);
         var sp = b.sp ? '<span class="spcell">'+spBadge(b)+'<span class="sponsor">'+esc(b.sp)+'</span></span>' : '<span class="sponsor none">— open —</span>';
+        var art = b.st!=='available' && b.art
+          ? '<span class="art '+b.art+'"><span class="d"></span>'+ARTLABEL[b.art]+'</span>'
+          : '<span class="na">—</span>';
         tr.innerHTML =
           '<td class="num"><span class="bnum'+(b.prime?' prime':'')+'">'+b.num+'</span></td>'+
           '<td>'+b.s+' ft'+(b.prime?' · <span style="color:var(--gold);font-weight:700">Prime</span>':'')+'</td>'+
           '<td class="num price">$'+b.price.toLocaleString()+'</td>'+
           '<td><span class="pill '+b.st+'"><span class="d"></span>'+STLABEL[b.st]+'</span></td>'+
-          '<td>'+sp+'</td>';
+          '<td>'+sp+'</td>'+
+          '<td class="artcell">'+art+'</td>';
         tr.addEventListener('mouseenter', function(){ hot(b.num,true); });
         tr.addEventListener('mouseleave', function(){ hot(b.num,false); });
         tbody.appendChild(tr); b._row=tr;
@@ -475,11 +514,16 @@
     spNames.sort().forEach(function(nm){
       var list=bySp[nm].sort(function(a,b){return a.num-b.num;}), b0=list[0];
       var val=list.reduce(function(s,b){return s+b.price;},0);
+      // artwork rollup: worst state across the partner's boards (needed > received > sent)
+      var arts=list.map(function(b){return b.art;}).filter(Boolean);
+      var artState = arts.indexOf('needed')>-1 ? 'needed' : (arts.indexOf('received')>-1 ? 'received' : (arts.length?'sent':''));
       var d=document.createElement('div'); d.className='pcard';
       d.innerHTML = spBadge(b0, true) +
         '<div><div class="pn">'+esc(nm)+'</div>'+
         '<div class="pb">Board'+(list.length>1?'s':'')+' '+list.map(function(b){return b.num;}).join(', ')+
-        ' · '+STLABEL[b0.st]+' · $'+val.toLocaleString()+'</div></div>';
+        ' · '+STLABEL[b0.st]+' · $'+val.toLocaleString()+'</div>'+
+        (artState ? '<div class="pb" style="margin-top:5px"><span class="art '+artState+'"><span class="d"></span>Artwork '+ARTLABEL[artState].toLowerCase()+'</span></div>' : '')+
+        '</div>';
       pw.appendChild(d);
     });
 
@@ -513,6 +557,7 @@
       htm+='<div class="tm"><b style="color:var(--ink)">'+esc(b.sp)+'</b></div>';
     }
     htm+='<div class="tm">'+STLABEL[b.st]+' · $'+b.price.toLocaleString()+'</div>';
+    if (b.st!=='available' && b.art) htm+='<div class="tm">Artwork: '+ARTLABEL[b.art]+'</div>';
     tip.innerHTML=htm; tip.style.display='block';
     var cr=b._chip.getBoundingClientRect(), wr=rinkWrap.getBoundingClientRect();
     var x=cr.left-wr.left+rinkWrap.scrollLeft+cr.width/2, y=cr.top-wr.top+cr.height/2;
@@ -546,12 +591,13 @@
         var n = applySheet(parseCSV(t));
         renderAll();
         if (n>0) setLive('ok','Live · synced from inventory sheet · '+fmtTime());
-        else setLive('warn','Sheet reached, but no board rows found — check the sheet is shared. Showing all available.');
+        else setLive('warn','Sheet reached, but no board rows found — showing signed deals from the page.');
       })
       .catch(function(){
-        RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; });
+        applySeed();
+        RAW.forEach(function(b){ if (b.st!=='available' && !b.art) b.art='needed'; });
         renderAll();
-        setLive('warn','Couldn’t reach the sheet (share it "Anyone with link: Viewer"). Showing all available.');
+        setLive('warn','Sheet offline — showing signed deals from the page. (Share the sheet "Anyone with link: Viewer" to go live.)');
       });
   }
 
