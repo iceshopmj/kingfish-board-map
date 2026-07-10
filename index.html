@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kingfish Board Map & Inventory — 2026–27</title>
 <style>
   :root {
@@ -160,8 +161,38 @@
   .footgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 28px; }
 
   @media (max-width: 720px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 9px; }
+    .stat { padding: 12px 14px; }
+    .stat .k { font-size: 21px; }
+    .stat:first-child { display: none; }  /* "40 positions" is implicit — save the space on phones */
     .footgrid { grid-template-columns: 1fr; }
+    .wrap { padding: 22px 14px 60px; }
+    section.card { padding: 16px 14px; border-radius: 14px; }
+    .card-head .note { display: none; }
+    .sub { font-size: 14px; }
+    .refresh { margin-left: 0; }
+  }
+
+  /* Phone: inventory table becomes stacked cards */
+  @media (max-width: 680px) {
+    table { min-width: 0; }
+    thead { display: none; }
+    tbody tr.zonehdr { display: block; margin: 14px 0 4px; }
+    tbody tr.zonehdr td { display: block; border-radius: 8px; border-bottom: none; }
+    tbody tr.b-row {
+      display: grid; grid-template-columns: 36px 1fr auto; align-items: center;
+      grid-template-areas: "num size status" "num price art" "num sponsor sponsor";
+      gap: 3px 10px; padding: 11px 2px; border-bottom: 1px solid var(--hair);
+    }
+    tbody tr.b-row td { display: block; padding: 0; border-bottom: none; }
+    tbody tr.b-row td:nth-child(1) { grid-area: num; }
+    tbody tr.b-row td:nth-child(2) { grid-area: size; font-size: 13px; }
+    tbody tr.b-row td:nth-child(3) { grid-area: price; text-align: left; font-size: 13px; color: var(--ink-soft); }
+    tbody tr.b-row td:nth-child(4) { grid-area: status; justify-self: end; }
+    tbody tr.b-row td:nth-child(5) { grid-area: sponsor; margin-top: 2px; }
+    tbody tr.b-row td:nth-child(6) { grid-area: art; justify-self: end; }
+    tbody tr.b-row td.artcell .na { display: none; }  /* no dash clutter on open boards */
+    .bnum { width: 30px; height: 30px; font-size: 13.5px; }
   }
 </style>
 
@@ -182,7 +213,7 @@
   <section class="card">
     <div class="card-head">
       <h2>Rink Plan — Board Positions</h2>
-      <span class="note">Click a status below to filter · hover a board to find it in the table</span>
+      <span class="note">Tap or hover a board for details · click a status below to filter</span>
     </div>
     <div class="rink-wrap">
       <svg class="rink" id="rink" viewBox="-72 -86 1144 600" role="img" aria-label="Top-down rink map with numbered dasher board positions"></svg>
@@ -446,6 +477,8 @@
       t.textContent=b.num; chip.appendChild(t);
       chip.addEventListener('mouseenter', function(){ hot(b.num, true); showTip(b); });
       chip.addEventListener('mouseleave', function(){ hot(b.num, false); hideTip(); });
+      // touch: tap a board to pin its card; tap anywhere else to dismiss
+      chip.addEventListener('click', function(ev){ ev.stopPropagation(); hot(b.num, true); showTip(b); });
       g.appendChild(chip); svg.appendChild(g); b._chip=chip;
     });
 
@@ -549,8 +582,10 @@
       if (b._row) b._row.classList.toggle('dim', anyOff && !on);
     });
   }
-  var tip=document.getElementById('tip'), rinkWrap=document.querySelector('.rink-wrap');
+  var tip=document.getElementById('tip'), rinkWrap=document.querySelector('.rink-wrap'), tipNum=0;
+  document.addEventListener('click', function(){ hideTip(); });
   function showTip(b){
+    tipNum=b.num;
     var htm='<div class="tn">Board '+b.num+' · '+b.s+' ft'+(b.prime?' · <span style="color:var(--gold)">Prime</span>':'')+'</div>';
     if (b.sp){
       if (b.logo) htm+='<img src="'+esc(b.logo)+'" alt="" onerror="this.remove()">';
@@ -566,7 +601,7 @@
     var ly=y-th-24; if (ly<4) ly=y+24;
     tip.style.left=lx+'px'; tip.style.top=ly+'px';
   }
-  function hideTip(){ tip.style.display='none'; }
+  function hideTip(){ tip.style.display='none'; if (tipNum){ hot(tipNum, false); tipNum=0; } }
 
   function hot(num, on){
     RAW.forEach(function(b){
