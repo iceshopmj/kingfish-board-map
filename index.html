@@ -1,6 +1,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kingfish Board Map & Inventory — 2026–27</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0d1626">
+<meta property="og:title" content="Baton Rouge Kingfish — Board Map & Sponsorship Inventory">
+<meta property="og:description" content="Live dasher-board inventory for the 2026–27 season — sold, in play, and available.">
+<meta property="og:image" content="apple-touch-icon.png">
 <style>
   :root {
     --ice: #e9f1fa;
@@ -55,6 +63,9 @@
   .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 22px 80px; }
 
   header.masthead { border-bottom: 3px solid var(--red); padding-bottom: 20px; margin-bottom: 22px; }
+  .mast-top { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
+  .mast-logo { height: 84px; width: auto; flex: none; }
+  @media (max-width: 640px) { .mast-logo { height: 62px; } .mast-top { gap: 12px; } }
   .eyebrow {
     font-family: var(--font-disp); font-weight: 700; font-size: 12px; letter-spacing: .28em;
     text-transform: uppercase; color: var(--red); margin: 0 0 8px;
@@ -198,7 +209,10 @@
 
 <div class="wrap">
   <header class="masthead">
-    <p class="eyebrow">Board Inventory · 2026–27 Season</p>
+    <div class="mast-top">
+      <img class="mast-logo" src="kingfish-logo.png" alt="Baton Rouge Kingfish">
+      <p class="eyebrow" style="margin:0">Board Inventory · 2026–27 Season</p>
+    </div>
     <h1>Dasher Board Map &amp; Sponsorship Inventory</h1>
     <p class="sub"><b>Baton Rouge Kingfish</b> · Raising Cane's River Center · 2026–27 season. NHL-regulation sheet, 200&nbsp;ft × 85&nbsp;ft. Every board position numbered, priced, and tracked — sold, in&nbsp;play, and available.</p>
     <div class="livebar">
@@ -277,8 +291,10 @@
   // ===== SIGNED DEALS (baked in — the sheet overrides these once its row is filled) =====
   // Board numbers are provisional placements; move a deal by editing its number here or in the sheet.
   var SEED = {
-    5:  {st:'sold', sp:'Brickyard South', art:'needed'},   // 4 ft — signed 2026-27
-    26: {st:'sold', sp:'180 Pros',        art:'needed'}    // 7 ft prime — signed 2026-27
+    5:  {st:'sold', sp:'Brickyard South',      art:'needed'},   // 4 ft — signed 2026-27
+    26: {st:'sold', sp:'180 Pros',            art:'needed'},   // 7 ft prime — signed 2026-27
+    3:  {st:'sold', sp:'Wilson Warehouse',    art:'needed'},   // 7 ft — signed 2026-27 (Penalty Kill + dasher)
+    13: {st:'sold', sp:'P&D Concealed Carry', art:'needed'}    // 7 ft corner — signed 2026-27
   };
 
   // Board geometry (fixed layout), clockwise from bench-side left. All start Available.
