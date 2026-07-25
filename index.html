@@ -284,7 +284,7 @@
       <div><b>Live data.</b> Board status and sponsor names update automatically from the Kingfish inventory sheet — edit the sheet, refresh this page, and the map repaints. Drop a logo image URL in column G (“Logo”) and an artwork status in column H (“Artwork”: Needed / Received / Sent) of a board row. Signed deals are also built into the page directly, so they show even before the sheet is updated — the sheet wins once its row is filled in.</div>
       <div><b>Artwork.</b> Every committed board needs print-ready art before it goes to production. The Artwork tag tracks the handoff: <b>Needed</b> → <b>Received</b> from sponsor → <b>Sent</b> to the board printer.</div>
       <div><b>Pricing.</b> From the 2026–27 rate card: 14&nbsp;ft = $10,000 · 7&nbsp;ft = $6,000 · 4&nbsp;ft = $4,000. <b>Prime</b> = camera-side broadcast wall + attacking-zone corners (highest exposure).</div>
-      <div><b>In-ice logos.</b> 10 sellable in-ice positions, each printed as a <b>mirrored pair</b> — the same logo on both halves of the sheet, so a sponsor shows on both ends. Faceoff Circle $12,000 · Neutral/Blue Line $8,000 · End Zone $6,000 (per pair). Track them live from sheet rows named <b>Ice 1…Ice 10</b> (same Status / Sponsor / Logo / Artwork columns as boards). <b>Confirm exact in-ice decal placement and count on a rink walkthrough before publishing final numbers.</b></div>
+      <div><b>In-ice logos.</b> 10 sellable in-ice positions, each printed as a <b>mirrored pair</b> — the same logo on both halves of the sheet, so a sponsor shows on both ends. Center Ice $20,000 (2) · In-Zone $10,000 (2) · Neutral Zone $8,000 (6) — per pair. The center-ice medallion stays the reserved Kingfish / River Center logo (never sold). Track them live from sheet rows named <b>Ice 1…Ice 10</b> (same Status / Sponsor / Logo / Artwork columns as boards). <b>Confirm exact in-ice decal placement on a rink walkthrough before publishing final numbers.</b></div>
       <div><b>Layout basis.</b> Positions derived from the true NHL-regulation 200×85 sheet (28-ft corners, ≈522 ft of dasher). Bench fronts, penalty boxes, and Zamboni gate are separate inventory. <b>Confirm exact panel count on a rink walkthrough before publishing final numbers.</b></div>
       <div><b>Category exclusivity</b> holds on the prime wall — one partner per category. Prime and corner boards carry a 20–40% exposure premium over back-side inventory.</div>
     </div>
@@ -300,8 +300,8 @@
   var CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv';
 
   var PRICE = {14:10000, 7:6000, 4:4000};
-  var STLABEL = {sold:'Sold', proposal:'Proposal Out', draft:'Draft — Pending', renewal:'Renewal Target', available:'Available'};
-  var stColor = {sold:'var(--st-sold)', proposal:'var(--st-proposal)', draft:'var(--st-draft)', renewal:'var(--st-renewal)', available:'var(--st-avail)'};
+  var STLABEL = {sold:'Sold', proposal:'Proposal Out', draft:'Draft — Pending', renewal:'Renewal Target', available:'Available', reserved:'Reserved'};
+  var stColor = {sold:'var(--st-sold)', proposal:'var(--st-proposal)', draft:'var(--st-draft)', renewal:'var(--st-renewal)', available:'var(--st-avail)', reserved:'var(--gold)'};
   var ARTLABEL = {needed:'Needed', received:'Received', sent:'Sent'};
 
   // ===== SIGNED DEALS (baked in — the sheet overrides these once its row is filled) =====
@@ -351,34 +351,51 @@
   // 10 sellable in-ice logo positions. Each one prints as a MIRRORED PAIR — the same
   // logo on both halves of the sheet — so a sponsor buys ONE spot and shows on both ends.
   // Only the left-half anchor (x < 500) is stored; the right twin is auto-derived at (1000 - x, y).
-  var ICE_PRICE = {circle:12000, zone:8000, end:6000};
-  var ICE_TIER  = {circle:'Faceoff Circle', zone:'Neutral / Blue Line', end:'End Zone'};
+  // THREE pricing tiers matched to the official Kingfish rate card:
+  //   Center Ice $20K (flanks the reserved center medallion) · In-Zone $10K · Neutral Zone $8K.
+  // Mix = 2 Center Ice + 2 In-Zone + 6 Neutral Zone = 10 sellable pairs. The actual
+  // center-ice medallion stays the reserved Kingfish / River Center logo — never sold.
+  var ICE_PRICE = {center:20000, zone:10000, neutral:8000};
+  var ICE_TIER  = {center:'Center Ice', zone:'In-Zone', neutral:'Neutral Zone'};
   var ICE = [
-    {loc:'Faceoff Circle — North', x:200, y:118, tier:'circle'},
-    {loc:'Faceoff Circle — South', x:200, y:307, tier:'circle'},
-    {loc:'Neutral Zone — North',   x:430, y:105, tier:'zone'},
-    {loc:'Neutral Zone — South',   x:430, y:320, tier:'zone'},
-    {loc:'Blue Line — North',      x:337, y:92,  tier:'zone'},
-    {loc:'Blue Line — South',      x:337, y:333, tier:'zone'},
-    {loc:'Center Flank',           x:290, y:212, tier:'zone'},
-    {loc:'End Zone — North',       x:110, y:118, tier:'end'},
-    {loc:'End Zone — South',       x:110, y:307, tier:'end'},
-    {loc:'End Zone — Slot',        x:150, y:212, tier:'end'}
+    {loc:'Center Ice — North Flank', x:385, y:160, tier:'center'},
+    {loc:'Center Ice — South Flank', x:385, y:265, tier:'center'},
+    {loc:'In-Zone — North (Off/Def)', x:200, y:118, tier:'zone'},
+    {loc:'In-Zone — South (Off/Def)', x:200, y:307, tier:'zone'},
+    {loc:'Neutral Zone — Upper Blue Line', x:375, y:102, tier:'neutral'},
+    {loc:'Neutral Zone — Lower Blue Line', x:375, y:322, tier:'neutral'},
+    {loc:'Neutral Zone — North Dot',  x:437, y:78,  tier:'neutral'},
+    {loc:'Neutral Zone — South Dot',  x:437, y:347, tier:'neutral'},
+    {loc:'Neutral Zone — North Edge', x:472, y:58,  tier:'neutral'},
+    {loc:'Neutral Zone — South Edge', x:472, y:367, tier:'neutral'}
   ];
-  ICE.forEach(function(p,i){ p.num=i+1; p.price=ICE_PRICE[p.tier]; p.st='available'; p.sp=''; p.logo=''; p.art=''; });
+  var iceNum=0;
+  ICE.forEach(function(p){
+    p.st='available'; p.sp=''; p.logo=''; p.art='';
+    if (p.house){ p.num=0; p.price=0; p.st='reserved'; p.sp='Baton Rouge Kingfish'; }
+    else { p.num=++iceNum; p.price=ICE_PRICE[p.tier]; }
+  });
 
   // Signed in-ice deals (baked in — sheet rows "Ice N" override these once filled).
+  // #3 = In-Zone North ($10K) → CC Construction (sold).
   var ICE_SEED = {
-    // 1: {st:'sold', sp:'Sponsor Name', art:'needed'}
+    3: {st:'sold', sp:'CC Construction', art:'needed'}
   };
   function applyIceSeed(){
-    ICE.forEach(function(p){ p.st='available'; p.sp=''; p.logo=''; p.art=''; });
+    ICE.forEach(function(p){ if(p.house) return; p.st='available'; p.sp=''; p.logo=''; p.art=''; });
     Object.keys(ICE_SEED).forEach(function(n){
-      var p=ICE[n-1], s=ICE_SEED[n]; if(!p) return;
+      var p=ICE[n-1], s=ICE_SEED[n]; if(!p||p.house) return;
       p.st=s.st; p.sp=s.sp; p.art=s.art||''; p.logo=s.logo||'';
     });
   }
   applyIceSeed();
+
+  // ===== IN-GAME FEATURE SPONSORS =====
+  // Not tied to a rink location (no chip) — tracked on the Partner Wall only.
+  // Official rate card: in-game features (Power Play, Penalty Kill, etc.) = $10,000 each.
+  var FEATURES = [
+    {flabel:'Power Play', price:10000, st:'sold', sp:'Chaney Mechanical', art:'needed'}
+  ];
 
   /* ---------- CSV PARSE + APPLY ---------- */
   function parseCSV(text){
@@ -443,13 +460,13 @@
     rows.forEach(function(r){
       if(!r || !r.length) return;
       var m=re.exec((r[0]||'').trim()); if(!m) return;
-      var p=ICE[parseInt(m[1],10)-1]; if(!p) return;
+      var p=ICE[parseInt(m[1],10)-1]; if(!p||p.house) return;
       var st=statusKey(r[4]), sp=(r[5]||'').trim();
       if(st!=='available' || sp){ p.st=st; p.sp=sp; }
       if((r[6]||'').trim()) p.logo=(r[6]||'').trim();
       if(artKey(r[7])) p.art=artKey(r[7]);
     });
-    ICE.forEach(function(p){ if(p.st!=='available' && !p.art) p.art='needed'; });
+    ICE.forEach(function(p){ if(!p.house && p.st!=='available' && !p.art) p.art='needed'; });
   }
 
   /* ---------- RENDER (dynamic parts; safe to re-run) ---------- */
@@ -527,8 +544,10 @@
     var avail = total - pipeline;
     var soldCt = RAW.filter(function(b){return b.st==='sold';}).length;
     var inPlayCt = RAW.filter(function(b){return b.st!=='available';}).length;
-    var iceTotal = ICE.reduce(function(s,p){return s+p.price;},0);
-    var iceInPlay = ICE.filter(function(p){return p.st!=='available';}).length;
+    var iceSell = ICE.filter(function(p){return !p.house;});
+    var iceTotal = iceSell.reduce(function(s,p){return s+p.price;},0);
+    var iceInPlay = iceSell.filter(function(p){return p.st!=='available';}).length;
+    var iceCount = iceSell.length;
     var statsEl = document.getElementById('stats');
     [
       ['40', 'Board Positions', ''],
@@ -536,9 +555,9 @@
       [money(soldVal), soldCt+' Boards Sold', 'good'],
       [money(avail), (40-inPlayCt)+' Boards Available', ''],
       [Math.round(inPlayCt/40*100)+'%', 'Committed / In Pipeline', ''],
-      ['10', 'In-Ice Logo Pairs', ''],
+      [String(iceCount), 'In-Ice Logo Pairs', ''],
       [money(iceTotal), 'In-Ice Inventory', 'accent'],
-      [iceInPlay+' / 10', 'In-Ice Committed', iceInPlay?'good':'']
+      [iceInPlay+' / '+iceCount, 'In-Ice Committed', iceInPlay?'good':'']
     ].forEach(function(s){
       var d=document.createElement('div'); d.className='stat'+(s[2]?' '+s[2]:'');
       d.innerHTML='<div class="k">'+s[0]+'</div><div class="l">'+s[1]+'</div>';
@@ -632,15 +651,16 @@
     /* PARTNER WALL (boards + in-ice, combined per sponsor) */
     var bySp={};
     function addPartner(item, kind){
-      if (item.st==='available' || !item.sp) return;
+      if (item.house || item.st==='available' || !item.sp) return;
       var e = bySp[item.sp] = bySp[item.sp] || {items:[], val:0, logo:'', arts:[]};
-      e.items.push({num:item.num, kind:kind, st:item.st});
+      e.items.push({num:item.num, kind:kind, st:item.st, label:item.flabel});
       e.val += item.price;
       if (item.logo && !e.logo) e.logo = item.logo;
       if (item.art) e.arts.push(item.art);
     }
     RAW.forEach(function(b){ addPartner(b,'B'); });
     ICE.forEach(function(p){ addPartner(p,'I'); });
+    FEATURES.forEach(function(f){ addPartner(f,'F'); });
     var spNames=Object.keys(bySp);
     document.getElementById('partnercard').style.display = spNames.length ? '' : 'none';
     var pw=document.getElementById('pwall');
@@ -649,8 +669,10 @@
       var boards=e.items.filter(function(i){return i.kind==='B';}).map(function(i){return i.num;}).sort(function(a,b){return a-b;});
       var ice=e.items.filter(function(i){return i.kind==='I';}).map(function(i){return i.num;}).sort(function(a,b){return a-b;});
       var parts=[];
+      var feats=e.items.filter(function(i){return i.kind==='F';}).map(function(i){return i.label;});
       if (boards.length) parts.push('Board'+(boards.length>1?'s':'')+' '+boards.join(', '));
       if (ice.length) parts.push('In-Ice '+ice.join(', '));
+      if (feats.length) parts.push('Feature: '+feats.join(', '));
       // artwork rollup: worst state across the partner's assets (needed > received > sent)
       var artState = e.arts.indexOf('needed')>-1 ? 'needed' : (e.arts.indexOf('received')>-1 ? 'received' : (e.arts.length?'sent':''));
       var d=document.createElement('div'); d.className='pcard';
@@ -687,6 +709,7 @@
       if (b._row) b._row.classList.toggle('dim', anyOff && !on);
     });
     ICE.forEach(function(p){
+      if (p.house) return;  // reserved house pair is always shown
       var on = active[p.st];
       if (p._chipL) p._chipL.style.opacity = on ? 1 : 0.12;
       if (p._chipR) p._chipR.style.opacity = on ? 1 : 0.12;
@@ -730,8 +753,8 @@
   function makeIceChip(p, cxv, mirror){
     var g=el('g',{'class':'chip iceicon','data-ice':p.num,'data-st':p.st}); g.style.cursor='pointer';
     g.style.filter='drop-shadow(0 2px 4px rgba(0,0,0,.28))';
-    var fill = p.st==='available' ? 'var(--surface)' : stColor[p.st];
-    var ring = p.st==='available' ? (p.tier==='circle'?'var(--gold)':'var(--blue)') : stColor[p.st];
+    var fill = p.house ? 'var(--surface)' : (p.st==='available' ? 'var(--surface)' : stColor[p.st]);
+    var ring = p.house ? 'var(--gold)' : (p.st==='available' ? (p.tier==='center'?'var(--gold)':'var(--blue)') : stColor[p.st]);
     var box=iceSquare(cxv, p.y, 17);
     // outer halo ring so in-ice logos read distinctly from round board chips
     g.appendChild(el('rect',{x:box.x-3,y:box.y-3,width:box.width+6,height:box.height+6,rx:12,fill:'none',stroke:ring,'stroke-width':1,opacity:.35}));
@@ -739,9 +762,16 @@
     g.appendChild(rect);
     // right twin is a true mirror image of the left — flip its contents horizontally
     var inner = mirror ? el('g',{transform:'translate('+cxv+' '+p.y+') scale(-1 1) translate('+(-cxv)+' '+(-p.y)+')'}) : el('g',{});
-    var t=el('text',{x:cxv,y:p.y+0.5,'text-anchor':'middle','dominant-baseline':'central','font-size':13,'font-weight':800,'font-family':'var(--font-disp)'});
-    t.setAttribute('fill', p.st==='available' ? 'var(--ink)' : '#fff'); t.textContent=p.num;
-    inner.appendChild(t); g.appendChild(inner);
+    if (p.house){
+      var sz=26, im=el('image',{x:cxv-sz/2,y:p.y-sz/2,width:sz,height:sz,preserveAspectRatio:'xMidYMid meet'});
+      im.setAttribute('href','kingfish-logo.png'); im.setAttributeNS('http://www.w3.org/1999/xlink','href','kingfish-logo.png');
+      inner.appendChild(im);
+    } else {
+      var t=el('text',{x:cxv,y:p.y+0.5,'text-anchor':'middle','dominant-baseline':'central','font-size':13,'font-weight':800,'font-family':'var(--font-disp)'});
+      t.setAttribute('fill', p.st==='available' ? 'var(--ink)' : '#fff'); t.textContent=p.num;
+      inner.appendChild(t);
+    }
+    g.appendChild(inner);
     g.addEventListener('mouseenter', function(){ hotIce(p.num, true); showIceTip(p, g); });
     g.addEventListener('mouseleave', function(){ hotIce(p.num, false); hideTip(); });
     g.addEventListener('click', function(ev){ ev.stopPropagation(); hotIce(p.num, true); showIceTip(p, g); });
@@ -771,6 +801,19 @@
   }
   function showIceTip(p, hoveredEl){
     tipNum=0; iceHot=p.num;
+    if (p.house){
+      var htm='<div class="tn" style="color:var(--gold)">Reserved · Center Flank</div>'+
+        '<div class="tm"><b style="color:var(--ink)">Baton Rouge Kingfish / River Center</b></div>'+
+        '<div class="tm">House logo — not for sale</div>'+
+        '<div class="tm" style="opacity:.8">Mirrored pair — prints on both halves of the ice</div>';
+      tip.innerHTML=htm; tip.style.display='block';
+      var hcr=hoveredEl.getBoundingClientRect(), hwr=rinkWrap.getBoundingClientRect();
+      var hx=hcr.left-hwr.left+rinkWrap.scrollLeft+hcr.width/2, hy=hcr.top-hwr.top+hcr.height/2;
+      var htw=tip.offsetWidth, hth=tip.offsetHeight;
+      tip.style.left=Math.min(Math.max(hx-htw/2,6), rinkWrap.scrollLeft+rinkWrap.clientWidth-htw-6)+'px';
+      tip.style.top=(hy-hth-24<4?hy+24:hy-hth-24)+'px';
+      return;
+    }
     var htm='<div class="tn">In-Ice Logo '+p.num+' · '+ICE_TIER[p.tier]+'</div>';
     if (p.sp){
       if (p.logo) htm+='<img src="'+esc(p.logo)+'" alt="" onerror="this.remove()">';
@@ -790,9 +833,9 @@
   function renderIceTable(){
     var icebody=document.getElementById('icebody'); if(!icebody) return;
     icebody.innerHTML='';
-    var groups={circle:[], zone:[], end:[]};
+    var groups={center:[], zone:[], neutral:[]};
     ICE.forEach(function(p){ groups[p.tier].push(p); });
-    ['circle','zone','end'].forEach(function(tk){
+    ['center','zone','neutral'].forEach(function(tk){
       var list=groups[tk]; if(!list.length) return;
       var tv=list.reduce(function(s,p){return s+p.price;},0);
       var open=list.filter(function(p){return p.st==='available';}).length;
