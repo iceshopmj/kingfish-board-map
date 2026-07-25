@@ -529,6 +529,7 @@
   }
 
   function money(n){ return '$'+(n/1000)+'K'; }
+  function moneyExact(n){ return '$'+n.toLocaleString(); }
 
   var order = ['sold','proposal','draft','renewal','available'];
   var active = {}; order.forEach(function(k){ active[k]=true; });
@@ -550,16 +551,25 @@
     var iceTotal = iceSell.reduce(function(s,p){return s+p.price;},0);
     var iceInPlay = iceSell.filter(function(p){return p.st!=='available';}).length;
     var iceCount = iceSell.length;
+    // Exact total sold across ALL categories: boards + in-ice logos + in-game features.
+    var iceSoldVal  = iceSell.filter(function(p){return p.st==='sold';}).reduce(function(s,p){return s+(p.paid||p.price);},0);
+    var featSoldVal = FEATURES.filter(function(f){return f.st==='sold';}).reduce(function(s,f){return s+(f.paid||f.price);},0);
+    var featSoldCt  = FEATURES.filter(function(f){return f.st==='sold';}).length;
+    var iceSoldCt   = iceSell.filter(function(p){return p.st==='sold';}).length;
+    var grandSold   = soldVal + iceSoldVal + featSoldVal;
+    var grandSoldCt = soldCt + iceSoldCt + featSoldCt;
     var statsEl = document.getElementById('stats');
     [
+      [moneyExact(grandSold), 'Total Sold — '+grandSoldCt+' deals (boards + ice + features)', 'good'],
       ['40', 'Board Positions', ''],
       [money(total), 'Total Board Inventory', 'accent'],
-      [money(soldVal), soldCt+' Boards Sold', 'good'],
+      [moneyExact(soldVal), soldCt+' Boards Sold', 'good'],
       [money(avail), (40-inPlayCt)+' Boards Available', ''],
       [Math.round(inPlayCt/40*100)+'%', 'Committed / In Pipeline', ''],
       [String(iceCount), 'In-Ice Logo Pairs', ''],
       [money(iceTotal), 'In-Ice Inventory', 'accent'],
-      [iceInPlay+' / '+iceCount, 'In-Ice Committed', iceInPlay?'good':'']
+      [iceInPlay+' / '+iceCount, 'In-Ice Committed', iceInPlay?'good':''],
+      [moneyExact(featSoldVal), featSoldCt+' In-Game Features Sold', 'good']
     ].forEach(function(s){
       var d=document.createElement('div'); d.className='stat'+(s[2]?' '+s[2]:'');
       d.innerHTML='<div class="k">'+s[0]+'</div><div class="l">'+s[1]+'</div>';
