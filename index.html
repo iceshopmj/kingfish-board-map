@@ -299,6 +299,14 @@
   var SHEET_ID = '1RUg9GG3r-FFW5G25WmENp7F_30ArgWOjACfT-YpxzY8';
   var CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv';
 
+  // Live CRM source (Auxen OS via the auxenai-mcp Worker). When set, the map reads
+  // inventory + accepts sponsor inquiries from the pipeline instead of the sheet.
+  // Same subdomain in prod: '/api'  →  sponsors.<domain>/api/kingfish/*.
+  // Empty = fall back to the Google Sheet, then to the baked-in SEED.
+  var API_BASE = '';
+
+  function slug(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+
   var PRICE = {14:10000, 7:6000, 4:4000};
   var STLABEL = {sold:'Sold', proposal:'Proposal Out', draft:'Draft — Pending', renewal:'Renewal Target', available:'Available', reserved:'Reserved'};
   var stColor = {sold:'var(--st-sold)', proposal:'var(--st-proposal)', draft:'var(--st-draft)', renewal:'var(--st-renewal)', available:'var(--st-avail)', reserved:'var(--gold)'};
@@ -340,7 +348,7 @@
   ];
   var fracs = [], idx = 0;
   SEG.forEach(function(g){ var n=g[0], a=g[1], b=g[2]; for (var i=0;i<n;i++){ fracs[idx++] = a + (b-a)*((i+0.5)/n); } });
-  RAW.forEach(function(b,i){ b.num=i+1; b.price=PRICE[b.s]; b.frac=fracs[i]; b.st='available'; b.sp=''; b.logo=''; b.art=''; });
+  RAW.forEach(function(b,i){ b.num=i+1; b.id='board-'+(i+1); b.price=PRICE[b.s]; b.frac=fracs[i]; b.st='available'; b.sp=''; b.logo=''; b.art=''; });
 
   function applySeed(){
     RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; b.art=''; b.cash=0; b.trade=0; b.incl=false; });
@@ -380,6 +388,7 @@
     p.st='available'; p.sp=''; p.logo=''; p.art='';
     if (p.house){ p.num=0; p.price=0; p.st='reserved'; p.sp='Baton Rouge Kingfish'; }
     else { p.num=++iceNum; p.price=ICE_PRICE[p.tier]; }
+    p.id = p.house ? 'ice-house' : ('ice-'+p.num);
   });
 
   // Signed in-ice deals (baked in — sheet rows "Ice N" override these once filled).
@@ -408,6 +417,7 @@
     {flabel:'Sole Jersey Sponsor (Home & Away)', price:20000, incl:true, st:'proposal', sp:BALLYS, art:'needed'},
     {flabel:'Kiss Cam Presenting',               price:10000, incl:true, st:'proposal', sp:BALLYS, art:'needed'}
   ];
+  FEATURES.forEach(function(f){ f.id='feature-'+slug(f.flabel); });
 
   /* ---------- CSV PARSE + APPLY ---------- */
   function parseCSV(text){
@@ -909,8 +919,29 @@
   function setLive(state, msg){ dot.className = 'livedot'+(state==='warn'?' warn':''); txt.textContent=msg; }
   function fmtTime(){ var d=new Date(); return d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
 
-  function load(){
-    setLive('warn','Loading live inventory…');
+  /* ---------- APPLY CRM FEED (Auxen OS pipeline via Worker) ---------- */
+  // feed.assets keyed by the same ids the map uses: board-N / ice-N / feature-<slug>.
+  // The CRM is the source of truth: anything not in the feed reads as Available.
+  function applyApi(feed){
+    var assets = (feed && feed.assets) || {}, n = 0;
+    RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; b.art=''; b.cash=0; b.trade=0; b.incl=false; });
+    ICE.forEach(function(p){ if(p.house) return; p.st='available'; p.sp=''; p.logo=''; p.art=''; p.cash=0; p.trade=0; p.incl=false; });
+    FEATURES.forEach(function(f){ f.st='available'; f.sp=''; f.cash=0; f.trade=0; f.incl=false; f.art=''; });
+    var byId = {};
+    RAW.forEach(function(b){ byId[b.id]=b; });
+    ICE.forEach(function(p){ if(!p.house) byId[p.id]=p; });
+    FEATURES.forEach(function(f){ byId[f.id]=f; });
+    Object.keys(assets).forEach(function(id){
+      var it = byId[id]; if(!it) return; var a = assets[id];
+      it.st = (a.status==='inquiry') ? 'draft' : a.status;
+      it.sp = a.sponsor||''; it.cash = a.cash||0; it.trade = a.trade||0; it.incl = false;
+      it.art = (it.st!=='available') ? 'needed' : '';
+      n++;
+    });
+    return n;
+  }
+
+  function loadSheet(){
     fetch(CSV_URL, {cache:'no-store'})
       .then(function(r){ if(!r.ok) throw new Error('http'); return r.text(); })
       .then(function(t){
@@ -927,8 +958,20 @@
         applyIceSeed();
         ICE.forEach(function(p){ if (p.st!=='available' && !p.art) p.art='needed'; });
         renderAll();
-        setLive('warn','Sheet offline — showing signed deals from the page. (Share the sheet "Anyone with link: Viewer" to go live.)');
+        setLive('warn','Offline — showing signed deals from the page.');
       });
+  }
+
+  function load(){
+    setLive('warn','Loading live inventory…');
+    if (API_BASE){
+      fetch(API_BASE.replace(/\/$/,'')+'/kingfish/inventory', {cache:'no-store'})
+        .then(function(r){ if(!r.ok) throw new Error('http'); return r.json(); })
+        .then(function(feed){ applyApi(feed); renderAll(); setLive('ok','Live · synced from Auxen OS pipeline · '+fmtTime()); })
+        .catch(function(){ loadSheet(); });
+    } else {
+      loadSheet();
+    }
   }
 
   if (!staticDrawn) drawStaticRink();
