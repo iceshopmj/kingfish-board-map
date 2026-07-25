@@ -306,11 +306,16 @@
 
   // ===== SIGNED DEALS (baked in — the sheet overrides these once its row is filled) =====
   // Board numbers are provisional placements; move a deal by editing its number here or in the sheet.
-  // `paid` = actual signed amount when it differs from the rate-card list price.
+  // Deal value fields: `cash` + `trade` = dollars in (split tracked separately). If neither is set,
+  // the rate-card list price is used. `incl:true` = asset bundled into another line's package value
+  // (counts as $0 here so package totals aren't double-counted).
+  var BALLYS = "Bally's Baton Rouge Hotel & Casino";
   var SEED = {
-    5:  {st:'sold', sp:'Brickyard South',      art:'needed'},               // 4 ft — signed 2026-27 (amount TBC)
-    26: {st:'sold', sp:'180 Pros',            paid:7000,  art:'needed'},    // 7 ft prime — signed $7,000
-    13: {st:'sold', sp:'P&D Concealed Carry', paid:5500,  art:'needed'}     // 7 ft corner — signed $5,500
+    5:  {st:'sold', sp:'Brickyard South',      cash:4000, trade:6000, art:'needed'}, // 4 ft — $4,000 cash + $6,000 trade
+    26: {st:'sold', sp:'180 Pros',             cash:7000, art:'needed'},             // 7 ft prime — $7,000 cash
+    13: {st:'sold', sp:'P&D Concealed Carry',  cash:5500, art:'needed'},             // 7 ft corner — $5,500 cash
+    20: {st:'proposal', sp:BALLYS, cash:60000, art:'needed'},  // Bally's package — full $60,000 attributed here
+    21: {st:'proposal', sp:BALLYS, incl:true,  art:'needed'}   // 2nd dasherboard, bundled in the package
   };
   // Wilson Warehouse = Penalty Kill in-game feature ($10,000) — tracked in FEATURES below, not a board.
 
@@ -338,10 +343,10 @@
   RAW.forEach(function(b,i){ b.num=i+1; b.price=PRICE[b.s]; b.frac=fracs[i]; b.st='available'; b.sp=''; b.logo=''; b.art=''; });
 
   function applySeed(){
-    RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; b.art=''; b.paid=0; });
+    RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; b.art=''; b.cash=0; b.trade=0; b.incl=false; });
     Object.keys(SEED).forEach(function(n){
       var b=RAW[n-1], s=SEED[n]; if (!b) return;
-      b.st=s.st; b.sp=s.sp; b.art=s.art||''; b.logo=s.logo||''; b.paid=s.paid||0;
+      b.st=s.st; b.sp=s.sp; b.art=s.art||''; b.logo=s.logo||''; b.cash=s.cash||0; b.trade=s.trade||0; b.incl=!!s.incl;
     });
   }
   applySeed();
@@ -380,13 +385,15 @@
   // Signed in-ice deals (baked in — sheet rows "Ice N" override these once filled).
   // #3 = In-Zone North ($10K) → CC Construction (sold).
   var ICE_SEED = {
-    3: {st:'sold', sp:'CC Construction', art:'needed'}
+    3: {st:'sold', sp:'CC Construction', cash:10000, art:'needed'},          // In-Zone North $10,000 cash
+    1: {st:'proposal', sp:BALLYS, incl:true, art:'needed'},                  // Bally's 2 in-ice logos (bundled in package)
+    2: {st:'proposal', sp:BALLYS, incl:true, art:'needed'}
   };
   function applyIceSeed(){
-    ICE.forEach(function(p){ if(p.house) return; p.st='available'; p.sp=''; p.logo=''; p.art=''; });
+    ICE.forEach(function(p){ if(p.house) return; p.st='available'; p.sp=''; p.logo=''; p.art=''; p.cash=0; p.trade=0; p.incl=false; });
     Object.keys(ICE_SEED).forEach(function(n){
       var p=ICE[n-1], s=ICE_SEED[n]; if(!p||p.house) return;
-      p.st=s.st; p.sp=s.sp; p.art=s.art||''; p.logo=s.logo||'';
+      p.st=s.st; p.sp=s.sp; p.art=s.art||''; p.logo=s.logo||''; p.cash=s.cash||0; p.trade=s.trade||0; p.incl=!!s.incl;
     });
   }
   applyIceSeed();
@@ -395,8 +402,11 @@
   // Not tied to a rink location (no chip) — tracked on the Partner Wall only.
   // Official rate card: in-game features (Power Play, Penalty Kill, etc.) = $10,000 each.
   var FEATURES = [
-    {flabel:'Power Play',   price:8000,  st:'sold', sp:'Chaney Mechanical', art:'needed'},   // signed $8,000
-    {flabel:'Penalty Kill', price:10000, st:'sold', sp:'Wilson Warehouse',  art:'needed'}    // signed $10,000
+    {flabel:'Power Play',   price:8000,  cash:8000,  st:'sold', sp:'Chaney Mechanical', art:'needed'},   // signed $8,000 cash
+    {flabel:'Penalty Kill', price:10000, cash:10000, st:'sold', sp:'Wilson Warehouse',  art:'needed'},   // signed $10,000 cash
+    // Bally's marquee non-rink assets — bundled into the $60,000 package (proposal out).
+    {flabel:'Sole Jersey Sponsor (Home & Away)', price:20000, incl:true, st:'proposal', sp:BALLYS, art:'needed'},
+    {flabel:'Kiss Cam Presenting',               price:10000, incl:true, st:'proposal', sp:BALLYS, art:'needed'}
   ];
 
   /* ---------- CSV PARSE + APPLY ---------- */
@@ -530,6 +540,11 @@
 
   function money(n){ return '$'+(n/1000)+'K'; }
   function moneyExact(n){ return '$'+n.toLocaleString(); }
+  // Deal value = cash + trade. Bundled ("incl") assets count as $0. Fallback to rate-card price
+  // when a committed item has no explicit cash/trade (e.g. a board sold at list).
+  function dealCash(it){ if(it.incl) return 0; if(it.cash||it.trade) return it.cash||0; return it.price||0; }
+  function dealTrade(it){ return it.incl?0:(it.trade||0); }
+  function dealVal(it){ return dealCash(it)+dealTrade(it); }
 
   var order = ['sold','proposal','draft','renewal','available'];
   var active = {}; order.forEach(function(k){ active[k]=true; });
@@ -542,28 +557,41 @@
 
     /* STATS */
     var total = RAW.reduce(function(s,b){return s+b.price;},0);
-    var soldVal = RAW.filter(function(b){return b.st==='sold';}).reduce(function(s,b){return s+(b.paid||b.price);},0);
-    var pipeline = RAW.filter(function(b){return b.st!=='available';}).reduce(function(s,b){return s+b.price;},0);
-    var avail = total - pipeline;
     var soldCt = RAW.filter(function(b){return b.st==='sold';}).length;
     var inPlayCt = RAW.filter(function(b){return b.st!=='available';}).length;
+    var pipeline = RAW.filter(function(b){return b.st!=='available';}).reduce(function(s,b){return s+b.price;},0);
+    var avail = total - pipeline;
     var iceSell = ICE.filter(function(p){return !p.house;});
     var iceTotal = iceSell.reduce(function(s,p){return s+p.price;},0);
     var iceInPlay = iceSell.filter(function(p){return p.st!=='available';}).length;
     var iceCount = iceSell.length;
-    // Exact total sold across ALL categories: boards + in-ice logos + in-game features.
-    var iceSoldVal  = iceSell.filter(function(p){return p.st==='sold';}).reduce(function(s,p){return s+(p.paid||p.price);},0);
-    var featSoldVal = FEATURES.filter(function(f){return f.st==='sold';}).reduce(function(s,f){return s+(f.paid||f.price);},0);
+
+    // ---- Exact sold totals across ALL categories, cash and trade tracked SEPARATELY ----
+    var ALL = RAW.concat(iceSell).concat(FEATURES);          // every sellable line
+    var sold = ALL.filter(function(x){return x.st==='sold';});
+    var cashSold  = sold.reduce(function(s,x){return s+dealCash(x);},0);
+    var tradeSold = sold.reduce(function(s,x){return s+dealTrade(x);},0);
+    var grandSold = cashSold + tradeSold;
+    var grandSoldCt = sold.length;
+    // Proposals out (e.g. Bally's) — counted once per sponsor via dealVal ($0 on bundled assets).
+    var propItems = ALL.filter(function(x){return x.st==='proposal';});
+    var propOut = propItems.reduce(function(s,x){return s+dealVal(x);},0);
+    var propSps = {}; propItems.forEach(function(x){ if(x.sp) propSps[x.sp]=1; });
+    var propCt = Object.keys(propSps).length;
+
+    var featSoldVal = FEATURES.filter(function(f){return f.st==='sold';}).reduce(function(s,f){return s+dealVal(f);},0);
     var featSoldCt  = FEATURES.filter(function(f){return f.st==='sold';}).length;
-    var iceSoldCt   = iceSell.filter(function(p){return p.st==='sold';}).length;
-    var grandSold   = soldVal + iceSoldVal + featSoldVal;
-    var grandSoldCt = soldCt + iceSoldCt + featSoldCt;
+    var boardSoldVal = RAW.filter(function(b){return b.st==='sold';}).reduce(function(s,b){return s+dealVal(b);},0);
+
     var statsEl = document.getElementById('stats');
     [
-      [moneyExact(grandSold), 'Total Sold — '+grandSoldCt+' deals (boards + ice + features)', 'good'],
+      [moneyExact(grandSold), 'Total Sold — '+grandSoldCt+' deals (cash + trade)', 'good'],
+      [moneyExact(cashSold),  'Cash Sold', 'good'],
+      [moneyExact(tradeSold), 'Trade Sold', 'accent'],
+      [moneyExact(propOut),   propCt+' Proposal'+(propCt===1?'':'s')+' Out', 'accent'],
       ['40', 'Board Positions', ''],
       [money(total), 'Total Board Inventory', 'accent'],
-      [moneyExact(soldVal), soldCt+' Boards Sold', 'good'],
+      [moneyExact(boardSoldVal), soldCt+' Boards Sold', 'good'],
       [money(avail), (40-inPlayCt)+' Boards Available', ''],
       [Math.round(inPlayCt/40*100)+'%', 'Committed / In Pipeline', ''],
       [String(iceCount), 'In-Ice Logo Pairs', ''],
@@ -664,9 +692,9 @@
     var bySp={};
     function addPartner(item, kind){
       if (item.house || item.st==='available' || !item.sp) return;
-      var e = bySp[item.sp] = bySp[item.sp] || {items:[], val:0, logo:'', arts:[]};
+      var e = bySp[item.sp] = bySp[item.sp] || {items:[], val:0, cash:0, trade:0, logo:'', arts:[]};
       e.items.push({num:item.num, kind:kind, st:item.st, label:item.flabel});
-      e.val += (item.paid||item.price);
+      e.val += dealVal(item); e.cash += dealCash(item); e.trade += dealTrade(item);
       if (item.logo && !e.logo) e.logo = item.logo;
       if (item.art) e.arts.push(item.art);
     }
@@ -690,7 +718,8 @@
       var d=document.createElement('div'); d.className='pcard';
       d.innerHTML = spBadge({sp:nm, logo:e.logo, st:st0}, true) +
         '<div><div class="pn">'+esc(nm)+'</div>'+
-        '<div class="pb">'+parts.join(' · ')+' · '+STLABEL[st0]+' · $'+e.val.toLocaleString()+'</div>'+
+        '<div class="pb">'+parts.join(' · ')+' · '+STLABEL[st0]+' · $'+e.val.toLocaleString()+
+          (e.trade>0 ? ' <span style="opacity:.75">($'+e.cash.toLocaleString()+' cash + $'+e.trade.toLocaleString()+' trade)</span>' : '')+'</div>'+
         (artState ? '<div class="pb" style="margin-top:5px"><span class="art '+artState+'"><span class="d"></span>Artwork '+ARTLABEL[artState].toLowerCase()+'</span></div>' : '')+
         '</div>';
       pw.appendChild(d);
@@ -737,7 +766,7 @@
       if (b.logo) htm+='<img src="'+esc(b.logo)+'" alt="" onerror="this.remove()">';
       htm+='<div class="tm"><b style="color:var(--ink)">'+esc(b.sp)+'</b></div>';
     }
-    htm+='<div class="tm">'+STLABEL[b.st]+' · $'+((b.paid||b.price)).toLocaleString()+'</div>';
+    htm+='<div class="tm">'+STLABEL[b.st]+' · $'+dealVal(b).toLocaleString()+(b.trade>0?' ($'+b.cash.toLocaleString()+' cash + $'+b.trade.toLocaleString()+' trade)':'')+'</div>';
     if (b.st!=='available' && b.art) htm+='<div class="tm">Artwork: '+ARTLABEL[b.art]+'</div>';
     tip.innerHTML=htm; tip.style.display='block';
     var cr=b._chip.getBoundingClientRect(), wr=rinkWrap.getBoundingClientRect();
