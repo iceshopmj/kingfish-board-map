@@ -227,10 +227,10 @@
   <section class="card">
     <div class="card-head">
       <h2>Rink Plan — Boards &amp; In-Ice Logos</h2>
-      <span class="note">Round chips = dasher boards · square chips = in-ice logos (mirrored pairs) · tap or hover any for details · click a status below to filter</span>
+      <span class="note">Round chips = dasher boards · square chips = in-ice logos (diagonal pairs) · tap or hover any for details · click a status below to filter</span>
     </div>
     <div class="rink-wrap">
-      <svg class="rink" id="rink" viewBox="-72 -86 1144 600" role="img" aria-label="Top-down rink map with numbered dasher board positions and mirrored in-ice logo pairs"></svg>
+      <svg class="rink" id="rink" viewBox="-72 -86 1144 600" role="img" aria-label="Top-down rink map with numbered dasher board positions and diagonal in-ice logo pairs"></svg>
       <div id="tip"></div>
     </div>
     <div class="legend" id="legend"></div>
@@ -253,8 +253,8 @@
 
   <section class="card">
     <div class="card-head">
-      <h2>In-Ice Logos — Mirrored Pairs</h2>
-      <span class="note">10 sellable in-ice positions · each prints as a mirrored pair (one logo on each half of the sheet) · plotted on the rink above</span>
+      <h2>In-Ice Logos — Diagonal Pairs</h2>
+      <span class="note">10 sellable in-ice positions · each prints as a diagonal pair (one logo kitty-corner on each end) · plotted on the rink above</span>
     </div>
     <div class="tbl-wrap">
       <table>
@@ -284,7 +284,7 @@
       <div><b>Live data.</b> Board status and sponsor names update automatically from the Kingfish inventory sheet — edit the sheet, refresh this page, and the map repaints. Drop a logo image URL in column G (“Logo”) and an artwork status in column H (“Artwork”: Needed / Received / Sent) of a board row. Signed deals are also built into the page directly, so they show even before the sheet is updated — the sheet wins once its row is filled in.</div>
       <div><b>Artwork.</b> Every committed board needs print-ready art before it goes to production. The Artwork tag tracks the handoff: <b>Needed</b> → <b>Received</b> from sponsor → <b>Sent</b> to the board printer.</div>
       <div><b>Pricing.</b> From the 2026–27 rate card: 14&nbsp;ft = $10,000 · 7&nbsp;ft = $6,000 · 4&nbsp;ft = $4,000. <b>Prime</b> = camera-side broadcast wall + attacking-zone corners (highest exposure).</div>
-      <div><b>In-ice logos.</b> 10 sellable in-ice positions, each printed as a <b>mirrored pair</b> — the same logo on both halves of the sheet, so a sponsor shows on both ends. Center Ice $20,000 (2) · In-Zone $10,000 (2) · Neutral Zone $8,000 (6) — per pair. The center-ice medallion stays the reserved Kingfish / River Center logo (never sold). Track them live from sheet rows named <b>Ice 1…Ice 10</b> (same Status / Sponsor / Logo / Artwork columns as boards). <b>Confirm exact in-ice decal placement on a rink walkthrough before publishing final numbers.</b></div>
+      <div><b>In-ice logos.</b> 10 sellable in-ice positions, each printed as a <b>diagonal pair</b> — the same logo placed kitty-corner across center ice, so a sponsor shows on both ends. Center Ice $20,000 (2) · In-Zone $10,000 (2) · Neutral Zone $8,000 (6) — per pair. The center-ice medallion stays the reserved Kingfish / River Center logo (never sold). Track them live from sheet rows named <b>Ice 1…Ice 10</b> (same Status / Sponsor / Logo / Artwork columns as boards). <b>Confirm exact in-ice decal placement on a rink walkthrough before publishing final numbers.</b></div>
       <div><b>Layout basis.</b> Positions derived from the true NHL-regulation 200×85 sheet (28-ft corners, ≈522 ft of dasher). Bench fronts, penalty boxes, and Zamboni gate are separate inventory. <b>Confirm exact panel count on a rink walkthrough before publishing final numbers.</b></div>
       <div><b>Category exclusivity</b> holds on the prime wall — one partner per category. Prime and corner boards carry a 20–40% exposure premium over back-side inventory.</div>
     </div>
@@ -347,27 +347,27 @@
 
   var zoneList = ['Bench Side','Attacking-Zone Corner','East End','Camera Side','West End'];
 
-  // ===== IN-ICE LOGOS (mirrored pairs) =====
-  // 10 sellable in-ice logo positions. Each one prints as a MIRRORED PAIR — the same
-  // logo on both halves of the sheet — so a sponsor buys ONE spot and shows on both ends.
-  // Only the left-half anchor (x < 500) is stored; the right twin is auto-derived at (1000 - x, y).
+  // ===== IN-ICE LOGOS (diagonal pairs) =====
+  // 10 sellable in-ice logo positions. Each one prints as a DIAGONAL PAIR — the same
+  // logo twice, placed kitty-corner through center ice — so a sponsor shows on both ends.
+  // Only the primary anchor is stored; the diagonal twin is auto-derived at (1000 - x, 425 - y).
   // THREE pricing tiers matched to the official Kingfish rate card:
-  //   Center Ice $20K (flanks the reserved center medallion) · In-Zone $10K · Neutral Zone $8K.
-  // Mix = 2 Center Ice + 2 In-Zone + 6 Neutral Zone = 10 sellable pairs. The actual
-  // center-ice medallion stays the reserved Kingfish / River Center logo — never sold.
+  //   Center Ice $20K · In-Zone $10K · Neutral Zone $8K.
+  // Mix = 2 Center Ice + 2 In-Zone + 6 Neutral Zone = 10 sellable pairs. Positions are the
+  // original ("old") layout spots. The center-ice medallion stays the reserved Kingfish logo.
   var ICE_PRICE = {center:20000, zone:10000, neutral:8000};
   var ICE_TIER  = {center:'Center Ice', zone:'In-Zone', neutral:'Neutral Zone'};
   var ICE = [
-    {loc:'Center Ice — North Flank', x:385, y:160, tier:'center'},
-    {loc:'Center Ice — South Flank', x:385, y:265, tier:'center'},
-    {loc:'In-Zone — North (Off/Def)', x:200, y:118, tier:'zone'},
-    {loc:'In-Zone — South (Off/Def)', x:200, y:307, tier:'zone'},
-    {loc:'Neutral Zone — Upper Blue Line', x:375, y:102, tier:'neutral'},
-    {loc:'Neutral Zone — Lower Blue Line', x:375, y:322, tier:'neutral'},
-    {loc:'Neutral Zone — North Dot',  x:437, y:78,  tier:'neutral'},
-    {loc:'Neutral Zone — South Dot',  x:437, y:347, tier:'neutral'},
-    {loc:'Neutral Zone — North Edge', x:472, y:58,  tier:'neutral'},
-    {loc:'Neutral Zone — South Edge', x:472, y:367, tier:'neutral'}
+    {loc:'Center Flank',           x:290, y:212, tier:'center'},
+    {loc:'End Zone — Slot',        x:150, y:212, tier:'center'},
+    {loc:'Faceoff Circle — North', x:200, y:118, tier:'zone'},
+    {loc:'Faceoff Circle — South', x:200, y:307, tier:'zone'},
+    {loc:'Blue Line — North',      x:337, y:92,  tier:'neutral'},
+    {loc:'Blue Line — South',      x:337, y:333, tier:'neutral'},
+    {loc:'Neutral Zone — North',   x:430, y:105, tier:'neutral'},
+    {loc:'Neutral Zone — South',   x:430, y:320, tier:'neutral'},
+    {loc:'End Zone — North',       x:110, y:118, tier:'neutral'},
+    {loc:'End Zone — South',       x:110, y:307, tier:'neutral'}
   ];
   var iceNum=0;
   ICE.forEach(function(p){
@@ -587,7 +587,7 @@
       g.appendChild(chip); svg.appendChild(g); b._chip=chip;
     });
 
-    /* IN-ICE LOGO CHIPS (mirrored pairs) */
+    /* IN-ICE LOGO CHIPS (diagonal pairs) */
     renderIce();
 
     /* LEGEND */
@@ -603,7 +603,7 @@
     var pl=document.createElement('span'); pl.className='lg ring prime'; pl.style.cursor='default';
     pl.innerHTML='<span class="dot"></span>Prime / broadcast tier'; legend.appendChild(pl);
     var il=document.createElement('span'); il.className='lg'; il.style.cursor='default';
-    il.innerHTML='<span class="dot" style="background:transparent;border:1.5px solid var(--st-avail);border-radius:3px"></span>In-ice logo · mirrored pair'; legend.appendChild(il);
+    il.innerHTML='<span class="dot" style="background:transparent;border:1.5px solid var(--st-avail);border-radius:3px"></span>In-ice logo · diagonal pair'; legend.appendChild(il);
 
     /* TABLE */
     var tbody=document.getElementById('tbody');
@@ -750,24 +750,24 @@
 
   /* ---------- IN-ICE LOGOS: render + interaction ---------- */
   function iceSquare(cxv, cyv, s){ return {x:cxv-s, y:cyv-s, width:2*s, height:2*s}; }
-  function makeIceChip(p, cxv, mirror){
+  function makeIceChip(p, cxv, cyv){
     var g=el('g',{'class':'chip iceicon','data-ice':p.num,'data-st':p.st}); g.style.cursor='pointer';
     g.style.filter='drop-shadow(0 2px 4px rgba(0,0,0,.28))';
     var fill = p.house ? 'var(--surface)' : (p.st==='available' ? 'var(--surface)' : stColor[p.st]);
     var ring = p.house ? 'var(--gold)' : (p.st==='available' ? (p.tier==='center'?'var(--gold)':'var(--blue)') : stColor[p.st]);
-    var box=iceSquare(cxv, p.y, 17);
+    var box=iceSquare(cxv, cyv, 17);
     // outer halo ring so in-ice logos read distinctly from round board chips
     g.appendChild(el('rect',{x:box.x-3,y:box.y-3,width:box.width+6,height:box.height+6,rx:12,fill:'none',stroke:ring,'stroke-width':1,opacity:.35}));
     var rect=el('rect',{'class':'icecore',x:box.x,y:box.y,width:box.width,height:box.height,rx:9,fill:fill,stroke:ring,'stroke-width':2.4});
     g.appendChild(rect);
-    // right twin is a true mirror image of the left — flip its contents horizontally
-    var inner = mirror ? el('g',{transform:'translate('+cxv+' '+p.y+') scale(-1 1) translate('+(-cxv)+' '+(-p.y)+')'}) : el('g',{});
+    // diagonal twin sits kitty-corner through center ice — both chips read upright
+    var inner = el('g',{});
     if (p.house){
-      var sz=26, im=el('image',{x:cxv-sz/2,y:p.y-sz/2,width:sz,height:sz,preserveAspectRatio:'xMidYMid meet'});
+      var sz=26, im=el('image',{x:cxv-sz/2,y:cyv-sz/2,width:sz,height:sz,preserveAspectRatio:'xMidYMid meet'});
       im.setAttribute('href','kingfish-logo.png'); im.setAttributeNS('http://www.w3.org/1999/xlink','href','kingfish-logo.png');
       inner.appendChild(im);
     } else {
-      var t=el('text',{x:cxv,y:p.y+0.5,'text-anchor':'middle','dominant-baseline':'central','font-size':13,'font-weight':800,'font-family':'var(--font-disp)'});
+      var t=el('text',{x:cxv,y:cyv+0.5,'text-anchor':'middle','dominant-baseline':'central','font-size':13,'font-weight':800,'font-family':'var(--font-disp)'});
       t.setAttribute('fill', p.st==='available' ? 'var(--ink)' : '#fff'); t.textContent=p.num;
       inner.appendChild(t);
     }
@@ -780,9 +780,10 @@
   function renderIce(){
     ICE.forEach(function(p){
       var grp=el('g',{'class':'chipgrp'});
-      var cl=makeIceChip(p, p.x, false), cr=makeIceChip(p, 1000-p.x, true);
-      // faint tie-line linking the mirrored pair across center ice
-      grp.insertBefore(el('line',{x1:p.x,y1:p.y,x2:1000-p.x,y2:p.y,stroke:'var(--blue)','stroke-width':1.3,'stroke-dasharray':'3 6',opacity:.45}), null);
+      var tx=1000-p.x, ty=425-p.y;
+      var cl=makeIceChip(p, p.x, p.y), cr=makeIceChip(p, tx, ty);
+      // faint tie-line linking the diagonal pair through center ice
+      grp.insertBefore(el('line',{x1:p.x,y1:p.y,x2:tx,y2:ty,stroke:'var(--blue)','stroke-width':1.3,'stroke-dasharray':'3 6',opacity:.45}), null);
       grp.appendChild(cl); grp.appendChild(cr); svg.appendChild(grp);
       p._chipL=cl; p._chipR=cr;
     });
@@ -795,7 +796,7 @@
   }
   function hotIce(num, on){
     ICE.forEach(function(p){ if(p.num!==num) return;
-      sizeIce(p._chipL, p.x, p.y, on); sizeIce(p._chipR, 1000-p.x, p.y, on);
+      sizeIce(p._chipL, p.x, p.y, on); sizeIce(p._chipR, 1000-p.x, 425-p.y, on);
       if(p._row) p._row.classList.toggle('hot', on);
     });
   }
@@ -805,7 +806,7 @@
       var htm='<div class="tn" style="color:var(--gold)">Reserved · Center Flank</div>'+
         '<div class="tm"><b style="color:var(--ink)">Baton Rouge Kingfish / River Center</b></div>'+
         '<div class="tm">House logo — not for sale</div>'+
-        '<div class="tm" style="opacity:.8">Mirrored pair — prints on both halves of the ice</div>';
+        '<div class="tm" style="opacity:.8">Diagonal pair — prints kitty-corner across the ice</div>';
       tip.innerHTML=htm; tip.style.display='block';
       var hcr=hoveredEl.getBoundingClientRect(), hwr=rinkWrap.getBoundingClientRect();
       var hx=hcr.left-hwr.left+rinkWrap.scrollLeft+hcr.width/2, hy=hcr.top-hwr.top+hcr.height/2;
@@ -820,7 +821,7 @@
       htm+='<div class="tm"><b style="color:var(--ink)">'+esc(p.sp)+'</b></div>';
     }
     htm+='<div class="tm">'+STLABEL[p.st]+' · $'+p.price.toLocaleString()+' · '+esc(p.loc)+'</div>';
-    htm+='<div class="tm" style="opacity:.8">Mirrored pair — prints on both halves of the ice</div>';
+    htm+='<div class="tm" style="opacity:.8">Diagonal pair — prints kitty-corner across the ice</div>';
     if (p.st!=='available' && p.art) htm+='<div class="tm">Artwork: '+ARTLABEL[p.art]+'</div>';
     tip.innerHTML=htm; tip.style.display='block';
     var cr=hoveredEl.getBoundingClientRect(), wr=rinkWrap.getBoundingClientRect();
@@ -850,7 +851,7 @@
           : '<span class="na">—</span>';
         tr.innerHTML =
           '<td class="num"><span class="bnum">'+p.num+'</span></td>'+
-          '<td>'+esc(p.loc)+' <span style="color:var(--ink-faint)">· mirrored pair</span></td>'+
+          '<td>'+esc(p.loc)+' <span style="color:var(--ink-faint)">· diagonal pair</span></td>'+
           '<td class="num price">$'+p.price.toLocaleString()+'</td>'+
           '<td><span class="pill '+p.st+'"><span class="d"></span>'+STLABEL[p.st]+'</span></td>'+
           '<td>'+sp+'</td>'+
