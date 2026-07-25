@@ -306,12 +306,13 @@
 
   // ===== SIGNED DEALS (baked in — the sheet overrides these once its row is filled) =====
   // Board numbers are provisional placements; move a deal by editing its number here or in the sheet.
+  // `paid` = actual signed amount when it differs from the rate-card list price.
   var SEED = {
-    5:  {st:'sold', sp:'Brickyard South',      art:'needed'},   // 4 ft — signed 2026-27
-    26: {st:'sold', sp:'180 Pros',            art:'needed'},   // 7 ft prime — signed 2026-27
-    3:  {st:'proposal', sp:'Wilson Warehouse', art:'needed'},   // 7 ft — proposal out, close to signing (Penalty Kill + dasher)
-    13: {st:'sold', sp:'P&D Concealed Carry', art:'needed'}    // 7 ft corner — signed 2026-27
+    5:  {st:'sold', sp:'Brickyard South',      art:'needed'},               // 4 ft — signed 2026-27 (amount TBC)
+    26: {st:'sold', sp:'180 Pros',            paid:7000,  art:'needed'},    // 7 ft prime — signed $7,000
+    13: {st:'sold', sp:'P&D Concealed Carry', paid:5500,  art:'needed'}     // 7 ft corner — signed $5,500
   };
+  // Wilson Warehouse = Penalty Kill in-game feature ($10,000) — tracked in FEATURES below, not a board.
 
   // Board geometry (fixed layout), clockwise from bench-side left. All start Available.
   var RAW = [
@@ -337,10 +338,10 @@
   RAW.forEach(function(b,i){ b.num=i+1; b.price=PRICE[b.s]; b.frac=fracs[i]; b.st='available'; b.sp=''; b.logo=''; b.art=''; });
 
   function applySeed(){
-    RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; b.art=''; });
+    RAW.forEach(function(b){ b.st='available'; b.sp=''; b.logo=''; b.art=''; b.paid=0; });
     Object.keys(SEED).forEach(function(n){
       var b=RAW[n-1], s=SEED[n]; if (!b) return;
-      b.st=s.st; b.sp=s.sp; b.art=s.art||''; b.logo=s.logo||'';
+      b.st=s.st; b.sp=s.sp; b.art=s.art||''; b.logo=s.logo||''; b.paid=s.paid||0;
     });
   }
   applySeed();
@@ -394,7 +395,8 @@
   // Not tied to a rink location (no chip) — tracked on the Partner Wall only.
   // Official rate card: in-game features (Power Play, Penalty Kill, etc.) = $10,000 each.
   var FEATURES = [
-    {flabel:'Power Play', price:10000, st:'sold', sp:'Chaney Mechanical', art:'needed'}
+    {flabel:'Power Play',   price:8000,  st:'sold', sp:'Chaney Mechanical', art:'needed'},   // signed $8,000
+    {flabel:'Penalty Kill', price:10000, st:'sold', sp:'Wilson Warehouse',  art:'needed'}    // signed $10,000
   ];
 
   /* ---------- CSV PARSE + APPLY ---------- */
@@ -539,7 +541,7 @@
 
     /* STATS */
     var total = RAW.reduce(function(s,b){return s+b.price;},0);
-    var soldVal = RAW.filter(function(b){return b.st==='sold';}).reduce(function(s,b){return s+b.price;},0);
+    var soldVal = RAW.filter(function(b){return b.st==='sold';}).reduce(function(s,b){return s+(b.paid||b.price);},0);
     var pipeline = RAW.filter(function(b){return b.st!=='available';}).reduce(function(s,b){return s+b.price;},0);
     var avail = total - pipeline;
     var soldCt = RAW.filter(function(b){return b.st==='sold';}).length;
@@ -654,7 +656,7 @@
       if (item.house || item.st==='available' || !item.sp) return;
       var e = bySp[item.sp] = bySp[item.sp] || {items:[], val:0, logo:'', arts:[]};
       e.items.push({num:item.num, kind:kind, st:item.st, label:item.flabel});
-      e.val += item.price;
+      e.val += (item.paid||item.price);
       if (item.logo && !e.logo) e.logo = item.logo;
       if (item.art) e.arts.push(item.art);
     }
@@ -725,7 +727,7 @@
       if (b.logo) htm+='<img src="'+esc(b.logo)+'" alt="" onerror="this.remove()">';
       htm+='<div class="tm"><b style="color:var(--ink)">'+esc(b.sp)+'</b></div>';
     }
-    htm+='<div class="tm">'+STLABEL[b.st]+' · $'+b.price.toLocaleString()+'</div>';
+    htm+='<div class="tm">'+STLABEL[b.st]+' · $'+((b.paid||b.price)).toLocaleString()+'</div>';
     if (b.st!=='available' && b.art) htm+='<div class="tm">Artwork: '+ARTLABEL[b.art]+'</div>';
     tip.innerHTML=htm; tip.style.display='block';
     var cr=b._chip.getBoundingClientRect(), wr=rinkWrap.getBoundingClientRect();
