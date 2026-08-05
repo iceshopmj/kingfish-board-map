@@ -324,14 +324,17 @@
     11: {st:'sold', sp:'Wilson Warehouse',      incl:true, art:'needed'},             // 7 ft — bundled into the $10,000 Penalty Kill package
     13: {st:'sold', sp:'P&D Concealed Carry',   cash:5500, art:'needed'},             // corner — $5,500 (contract reads 4 ft; this slot is 7 ft — confirm)
     19: {st:'sold', sp:'180 Pros',              cash:7000, art:'needed'},             // 7 ft attacking-zone corner — $7,000
-    20: {st:'sold', sp:BALLYS, cash:11500,      art:'needed'},                        // Bally's — $11,500 guaranteed (restructured 2026-08-05)
+    20: {st:'sold', sp:BALLYS, cash:11500, trade:51400, art:'needed'},                // Bally's total partnership value $62,900:
+                                                                                      //   $11,500 guaranteed cash (2 x $5,750) + $51,400 hotel-side value —
+                                                                                      //   ~$29,900 visiting-team room revenue, ~$10,000 friends-and-family
+                                                                                      //   commission at 20%, ~$11,500 in 100 comp room nights for officials.
     21: {st:'sold', sp:BALLYS, incl:true,       art:'needed'},                        // 2nd Bally's board, bundled
     26: {st:'sold', sp:'United Cajun Navy',     cash:10000, art:'needed'},            // 7 ft camera side — $10,000 covers both UCN boards
     27: {st:'sold', sp:'United Cajun Navy',     incl:true, art:'needed'},             // 2nd UCN board, bundled
     28: {st:'sold', sp:'Preston Environmental', incl:true, art:'needed'},             // 7 ft prime camera side — bundled into the $25,000 package
     29: {st:'sold', sp:'Steve Kent Services',   cash:10000, art:'needed'},            // 7 ft prime camera side — $10,000
-    30: {st:'sold', sp:'White Water Car Wash',  cash:10000, art:'needed'},            // 4 ft camera side — $10,000 covers both boards
-    31: {st:'sold', sp:'White Water Car Wash',  incl:true, art:'needed'}              // 2nd board — FORFEITED if they elect the player commercial (in lieu of)
+    30: {st:'proposal', sp:'White Water Car Wash', cash:10000, art:'needed'},         // NOT SIGNED — proposal out, $10,000 covers both boards
+    31: {st:'proposal', sp:'White Water Car Wash', incl:true, art:'needed'}           // 2nd board — FORFEITED if they elect the player commercial (in lieu of)
   };
   // Camera-side 7 ft boards (26-29) are reserved for the four contracts that guarantee camera side:
   // United Cajun Navy (x2), Preston Environmental, Steve Kent Services. 180 Pros moved to 19 —
@@ -404,10 +407,10 @@
   // Signed in-ice deals (baked in — sheet rows "Ice N" override these once filled).
   // #3 = In-Zone North ($10K) → CC Construction (sold).
   var ICE_SEED = {
-    1: {st:'sold', sp:BALLYS, incl:true, art:'needed'},                      // Bally's in-ice pair 1 (bundled)
-    2: {st:'sold', sp:BALLYS, incl:true, art:'needed'},                      // Bally's in-ice pair 2 (bundled)
+    1: {st:'sold', sp:BALLYS, incl:true, art:'needed'},                      // Bally's — TWO in-ice logos = ONE pair (bundled). Pair 2 is back in inventory.
     3: {st:'sold', sp:'CC Construction', cash:10000, art:'needed'},          // In-Zone North $10,000 cash
-    4: {st:'sold', sp:'Preston Environmental', cash:25000, art:'needed'}     // In-Zone South — carries the full $25,000 Preston package
+    4: {st:'sold', sp:'Preston Environmental', cash:30000, art:'needed'}     // In-Zone South — $25,000 package + $5,000 season tickets.
+                                                                            // Preston group total is $40,000 with Steve Kent Services ($10,000), same buyer (Cathy Preston).
   };
   function applyIceSeed(){
     ICE.forEach(function(p){ if(p.house) return; p.st='available'; p.sp=''; p.logo=''; p.art=''; p.cash=0; p.trade=0; p.incl=false; });
@@ -433,7 +436,7 @@
     {flabel:'Cancer Awareness Night (Presenting)', price:10000, incl:true,  st:'sold', sp:'Preston Environmental', art:'needed'},
     // Recurring in-game features.
     {flabel:'Hard Hat Hit of the Night',           price:10000, incl:true,  st:'sold', sp:'CC Construction', art:'needed'},
-    {flabel:'Dirtiest Car of the Night',           price:10000, incl:true,  st:'sold', sp:'White Water Car Wash', art:'needed'},
+    {flabel:'Dirtiest Car of the Night',           price:10000, incl:true,  st:'proposal', sp:'White Water Car Wash', art:'needed'},
     {flabel:'In-Game Activation — Partner Choice', price:10000, incl:true,  st:'sold', sp:'Steve Kent Services', art:'needed'}
   ];
   FEATURES.forEach(function(f){ f.id='feature-'+slug(f.flabel); });
